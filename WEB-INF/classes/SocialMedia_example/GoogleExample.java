@@ -1,66 +1,93 @@
 package SocialMedia_example;
 
-import java.util.*;
-
-import org.scribe.builder.*;
-import org.scribe.builder.api.*;
-import org.scribe.model.*;
-import org.scribe.oauth.*;
+import org.scribe.builder.ServiceBuilder;
+import org.scribe.builder.api.GoogleApi;
+import org.scribe.model.OAuthRequest;
+import org.scribe.model.Response;
+import org.scribe.model.Token;
+import org.scribe.model.Verb;
+import org.scribe.model.Verifier;
+import org.scribe.oauth.OAuthService;
 
 public class GoogleExample
 {
-  private static final String NETWORK_NAME = "Google";
-  private static final String AUTHORIZE_URL = "https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=";
-  private static final String PROTECTED_RESOURCE_URL = "https://docs.google.com/feeds/default/private/full/";
-  private static final String SCOPE = "https://docs.google.com/feeds/";
+    private static final String NETWORK_NAME = "Google";
+    private static final String PROTECTED_RESOURCE_URL = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json";
+    private static final String SCOPE = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
+    private static final Token EMPTY_TOKEN = null;
 
-  public static void main(String[] args)
-  {
-    OAuthService service = new ServiceBuilder()
-                                  .provider(GoogleApi.class)
-                                  .apiKey("anonymous")
-                                  .apiSecret("anonymous")
-                                  .scope(SCOPE)
-                                  .build();
-    Scanner in = new Scanner(System.in);
+    /* TODO: Put your own API key, secret, and callback URL here. */
+    String apiKey = "162935401134-7riuhbp78ousbh65n3899sj8mh39i3sl.apps.googleusercontent.com";//"162935401134.apps.googleusercontent.com";
+    String apiSecret = "3qtZwTxhaMfQed-6pKRRGfuJ";//"PqFAj_jxdIumN_lsguKxGHXe";
+    String callbackUrl = "https://freelancing.gr/index.jsp?link=chooseregrole&media=google";
 
-    System.out.println("=== " + NETWORK_NAME + "'s OAuth Workflow ===");
-    System.out.println();
+    static Token requestToken;
+    static Token accessToken;
+    
+    org.apache.log4j.Logger cat = org.apache.log4j.Logger.getLogger("GoogleExample.class");
 
-    // Obtain the Request Token
-    System.out.println("Fetching the Request Token...");
-    Token requestToken = service.getRequestToken();
-    System.out.println("Got the Request Token!");
-    System.out.println("(if your curious it looks like this: " + requestToken + " )");
-    System.out.println();
+    public String initializeScribe()
+    {
+            OAuthService service = new ServiceBuilder()
+                    .provider(GoogleApi.class)
+                    .apiKey(apiKey)
+                    .apiSecret(apiSecret)
+                    .callback(callbackUrl)
+                    .scope(SCOPE)
+                    .build();
 
-    System.out.println("Now go and authorize Scribe here:");
-    System.out.println(AUTHORIZE_URL + requestToken.getToken());
-    System.out.println("And paste the verifier here");
-    System.out.print(">>");
-    Verifier verifier = new Verifier(in.nextLine());
-    System.out.println();
+            cat.info("=== " + NETWORK_NAME + "'s OAuth Workflow ===");
 
-    // Trade the Request Token and Verfier for the Access Token
-    System.out.println("Trading the Request Token for an Access Token...");
-    Token accessToken = service.getAccessToken(requestToken, verifier);
-    System.out.println("Got the Access Token!");
-    System.out.println("(if your curious it looks like this: " + accessToken + " )");
-    System.out.println();
+            //Obtain request token
+            requestToken = service.getRequestToken();
+            // Obtain the Authorization URL
+            cat.info("Fetching the Authorization URL...");
+            String authorizationUrl = service.getAuthorizationUrl(requestToken);
+            cat.info("Got the Authorization URL!");
+            cat.info("Now go and authorize Scribe here:");
+            cat.info(authorizationUrl);
+            cat.info("And paste the authorization code here");
+            System.out.print(">>");
 
-    // Now let's go and ask for a protected resource!
-    System.out.println("Now we're going to access a protected resource...");
-    OAuthRequest request = new OAuthRequest(Verb.GET, PROTECTED_RESOURCE_URL);
-    service.signRequest(accessToken, request);
-    request.addHeader("GData-Version", "3.0");
-    Response response = request.send();
-    System.out.println("Got it! Lets see what we found...");
-    System.out.println();
-    System.out.println(response.getCode());
-    System.out.println(response.getBody());
+            return authorizationUrl;
+    }
 
-    System.out.println();
-    System.out.println("Thats it man! Go and build something awesome with Scribe! :)");
 
-  }
+    public String getResponce( String theverifier )
+    {
+        OAuthService service = new ServiceBuilder()
+                .provider(GoogleApi.class)
+                .apiKey(apiKey)
+                .apiSecret(apiSecret)
+                .callback(callbackUrl)
+                .scope(SCOPE)
+                .build();
+
+        Verifier verifier = new Verifier(theverifier);
+
+        // Trade the Request Token and Verfier for the Access Token
+        cat.info("Trading the Request Token for an Access Token...");
+        accessToken = service.getAccessToken(requestToken, verifier);
+        cat.info("Got the Access Token!");
+        cat.info("(if your curious it looks like this: " + accessToken + " )");
+
+        // Now let's go and ask for a protected resource!
+        cat.info("Now we're going to access a protected resource...");
+        OAuthRequest request = new OAuthRequest(Verb.GET, PROTECTED_RESOURCE_URL);
+        service.signRequest(accessToken, request);
+        Response response = request.send();
+        cat.info("Got it! Lets see what we found...");
+
+        cat.info(response.getCode());
+        cat.info(response.getBody());
+
+        cat.info("Thats it man! Go and build something awesome with Scribe! :)");
+
+        return response.getBody();
+    }
+
+    public String getAccessToken()
+    {
+        return  accessToken.getToken();
+    }
 }
